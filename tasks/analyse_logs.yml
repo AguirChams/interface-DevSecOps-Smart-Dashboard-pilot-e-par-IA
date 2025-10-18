@@ -1,0 +1,33 @@
+---
+- name: Analyse détaillée des logs et sauvegarde du rapport
+  hosts: hosts
+  become: yes
+  vars:
+    log_files:
+      - /var/log/auth.log
+      - /var/log/syslog
+    search_patterns:
+      - "error"
+      - "fail"
+      - "authentication failure"
+  tasks:
+
+    - name: Créer un fichier d'analyse des logs avec la date du jour
+      shell: |
+        today=$(date +%Y-%m-%d)
+        output_file="/var/log/analysis_${today}.log"
+        > $output_file
+        for log in {{ log_files | join(' ') }}; do
+          echo "=== Analyse de $log ===" >> $output_file
+          for pattern in {{ search_patterns | join(' ') }}; do
+            echo "--- Recherche du motif : $pattern ---" >> $output_file
+            grep -i "$pattern" $log >> $output_file || true
+            echo "" >> $output_file
+          done
+        done
+      args:
+        executable: /bin/bash
+
+    - name: Afficher le chemin du fichier d'analyse généré
+      debug:
+        msg: "Fichier d'analyse créé : /var/log/analysis_{{ lookup('pipe', 'date +%Y-%m-%d') }}.log"

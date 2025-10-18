@@ -1,0 +1,28 @@
+- name: Appliquer les privilèges administrateurs
+  hosts: all
+  become: yes
+  tasks:
+    - name: Include vars
+      include_vars:
+        file: vars.yml
+
+    - name: Créer un groupe administrateur sécurisé
+      ansible.builtin.group:
+        name: "{{ admin_group }}"
+        state: present
+        gid: "{{ admin_group_gid }}"
+
+    - name: Ajouter un utilisateur avec rôle admin
+      ansible.builtin.user:
+        name: securite_user
+        group: "{{ admin_group }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Autoriser l'accès sudo uniquement au groupe admin
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/90-admins
+        content: "%{{ admin_group }} ALL=(ALL) NOPASSWD:ALL"
+        mode: '0440'
+    - name: Vérifier que le groupe admin a été créé
+      ansible.builtin.command: getent group "{{ admin_group }}" 
